@@ -7,6 +7,9 @@ import sqlite3
 import urllib
 import hashlib
 import os
+import SocketServer
+import sys
+from StringIO import StringIO
 
 DB = "db"
 
@@ -115,15 +118,30 @@ def search(tags):
     alp.feedback(items)
 
 
-init_db()
+class RequestHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        # redirect stdout to string
+        sys.stdout = buf = StringIO()
 
-fun = alp.args()[0]
-tags = alp.args()[1:]
+        data = self.rfile.readline().strip().split(' ')
+        command = data[0]
+        tags = data[1:]
 
-if fun == "tag":
-    tag(tags)
-elif fun == "save":
-    save(tags)
-elif fun == "search":
-    search(tags)
+        if command == "tag":
+            tag(tags)
+        elif command == "save":
+            save(tags)
+        elif command == "search":
+            search(tags)
 
+        self.wfile.write(buf.getvalue())
+        buf.close()
+
+if __name__ == '__main__':
+    init_db()
+    server = SocketServer.UnixStreamServer("./socket", RequestHandler)
+    try:
+        server.serve_forever()
+    finally:
+        sys.stdout = sys.__stdout__
+        os.remove('./socket')
