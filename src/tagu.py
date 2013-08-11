@@ -9,6 +9,7 @@ import hashlib
 import os
 import SocketServer
 import sys
+import atexit
 from StringIO import StringIO
 
 DB = "db"
@@ -124,24 +125,33 @@ class RequestHandler(SocketServer.StreamRequestHandler):
         sys.stdout = buf = StringIO()
 
         data = self.rfile.readline().strip().split(' ')
-        command = data[0]
-        tags = data[1:]
 
-        if command == "tag":
-            tag(tags)
-        elif command == "save":
-            save(tags)
-        elif command == "search":
-            search(tags)
+        if data:
+            command = data[0]
+            tags = data[1:]
+
+            if command == "tag":
+                tag(tags)
+            elif command == "save":
+                save(tags)
+            elif command == "search":
+                search(tags)
 
         self.wfile.write(buf.getvalue())
         buf.close()
 
 if __name__ == '__main__':
-    init_db()
-    server = SocketServer.UnixStreamServer("./socket", RequestHandler)
-    try:
-        server.serve_forever()
-    finally:
+
+    def cleanup():
         sys.stdout = sys.__stdout__
         os.remove('./socket')
+
+    atexit.register(cleanup)
+
+    if os.path.exists('./socket'):
+        os.remove('./socket')
+
+    init_db()
+    server = SocketServer.UnixStreamServer("./socket", RequestHandler)
+    server.serve_forever()
+
