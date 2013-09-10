@@ -90,7 +90,7 @@ def search(tags):
             SELECT DISTINCT urls.* FROM urls
             JOIN tags ON tags.url_id = urls.id
             WHERE tags.tag LIKE ?
-        ''', ('%'+tags[0]+'%', ))
+        ''', ('%'+tag+'%', ))
 
         rows += c.fetchall()
 
